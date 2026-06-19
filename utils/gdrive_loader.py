@@ -106,7 +106,7 @@ def ensure_datasets_available(data_dir: str | None = None) -> bool:
     print(f"[PRISM] {len(missing)} file(s) missing or invalid: {missing}")
     print(f"[PRISM] Downloading from Google Drive folder: {GDRIVE_FOLDER_ID}")
     _st_or_print(
-        f"📥 Downloading {len(missing)} dataset file(s) from Google Drive — this only happens once…"
+        f"📥 Downloading {len(missing)} dataset files"
     )
 
     url = f"https://drive.google.com/drive/folders/{GDRIVE_FOLDER_ID}"
