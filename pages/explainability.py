@@ -9,11 +9,13 @@ import matplotlib.pyplot as plt
 import sys, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).parent.parent))
 from pages.state_manager import get_or_init_state
+import theme
 from utils.model_utils   import (shap_summary_figure, shap_bar_figure,
                                   shap_local_figure, assign_risk_label)
 
 
 def render():
+    theme.inject_theme_css()
     if not get_or_init_state():
         return
 

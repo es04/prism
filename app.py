@@ -1,374 +1,262 @@
 from dotenv import load_dotenv
+
 load_dotenv()
 
 import streamlit as st
 
 st.set_page_config(
-    page_title="PRISM | Predictive Risk Identification for Student Monitoring",
+    page_title="PRISM | Student Risk Monitor",
     page_icon="🔮",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
 )
 
-st.markdown(
-    """
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap');
+# Inject theme CSS (reads dark_mode from session_state)
+import sys, pathlib
 
-:root {
-    /* Ink (sidebar + dark surfaces) */
-    --ink:          #0B0E16;
-    --ink-2:        #141A29;
-    --ink-line:     rgba(255,255,255,0.07);
-    --text-on-ink:      #E7E9F0;
-    --text-on-ink-dim:  #7C8298;
+sys.path.insert(0, str(pathlib.Path(__file__).parent))
+import theme
 
-    /* Spectrum — the dispersion scale. Doubles as the risk-tier scale:
-       teal (calm/low) -> amber (caution/medium) -> coral (alert/high) */
-    --spectrum-violet: #7C6FF0;
-    --spectrum-blue:   #4F8EF7;
-    --spectrum-teal:   #14B8A6;
-    --spectrum-amber:  #F5A623;
-    --spectrum-coral:  #F0506B;
-    --spectrum-gradient: linear-gradient(90deg, var(--spectrum-violet), var(--spectrum-blue), var(--spectrum-teal), var(--spectrum-amber), var(--spectrum-coral));
+# Initialise dark mode preference
+if "dark_mode" not in st.session_state:
+    st.session_state["dark_mode"] = False
 
-    /* Paper (light canvas, used by cards/badges/boxes across pages) */
-    --ink-on-paper:    #1B2030;
-    --muted-on-paper:  #64748B;
-    --hairline:        #E2E8F0;
+theme.inject_theme_css()
+
+# ── Auto-provision Supabase schema ────────────────────────────────────────────
+import utils.supabase_client as sb
+
+if "supabase_setup_done" not in st.session_state:
+    try:
+        _schema_status = sb.ensure_schema()
+    except Exception as e:
+        _schema_status = {"success": False, "message": str(e)}
+    st.session_state["supabase_setup_done"] = True
+    st.session_state["supabase_schema_status"] = _schema_status
+else:
+    _schema_status = st.session_state.get("supabase_schema_status", {})
+
+_sb_ok = sb.is_connected
+
+# ── Navigation ────────────────────────────────────────────────────────────────
+NAV_SECTIONS = {
+    "Overview": [
+        ("🏠  Dashboard", "Dashboard Overview"),
+    ],
+    "Data Pipeline": [
+        ("📤  Upload Data", "Upload & Configure Data"),
+        ("📋  Dataset Overview", "Dataset Overview"),
+        ("⚙️  Preprocessing", "Preprocessing Pipeline"),
+    ],
+    "Model": [
+        ("🤖  Train Model", "Model Training & Tuning"),
+        ("🔍  Predictions", "Student Risk Predictions"),
+        ("📊  Risk Report", "Prediction Summary"),
+    ],
+    "Insights": [
+        ("💡  Explainability", "Explainability Insights"),
+        ("📈  Feature Importance", "Feature Importance"),
+    ],
+    "Info": [
+        ("ℹ️  About PRISM", "About PRISM"),
+    ],
 }
 
-@media (prefers-reduced-motion: no-preference) {
-    @keyframes prism-shimmer {
-        0%, 100% { background-position: 0% 50%; }
-        50%      { background-position: 100% 50%; }
-    }
-    .spectrum-divider, .page-header::before { animation: prism-shimmer 6s ease-in-out infinite; }
-}
+all_nav = [
+    (label, key)
+    for section_items in NAV_SECTIONS.values()
+    for label, key in section_items
+]
+nav_labels = [p[0] for p in all_nav]
+nav_keys = [p[1] for p in all_nav]
 
-body, .stApp { font-family: 'Inter', sans-serif; }
-
-/* ── Sidebar base ── */
-[data-testid="stSidebar"] {
-    background: radial-gradient(140% 100% at 0% 0%, var(--ink-2) 0%, var(--ink) 55%) !important;
-    border-right: 1px solid var(--ink-line) !important;
-}
-[data-testid="stSidebar"] * { color: var(--text-on-ink) !important; }
-
-/* ── Spectrum divider — the signature element ── */
-.spectrum-divider {
-    height: 2px;
-    margin: 0.85rem 1.1rem;
-    border-radius: 2px;
-    background: var(--spectrum-gradient);
-    background-size: 200% 100%;
-    opacity: 0.85;
-}
-
-/* ── Section eyebrows (CSS-only, no DOM change needed) ── */
-[data-testid="stSidebar"] .sidebar-section-label {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.62rem !important;
-    font-weight: 600 !important;
-    letter-spacing: 0.14em !important;
-    text-transform: uppercase !important;
-    color: var(--text-on-ink-dim) !important;
-    padding: 0.5rem 1.2rem 0.3rem !important;
-}
-
-/* ── Radio group (nav) ── */
-[data-testid="stSidebar"] .stRadio > div { gap: 1px !important; }
-[data-testid="stSidebar"] .stRadio > label { display: none !important; }
-
-[data-testid="stSidebar"] .stRadio label {
-    display: flex !important;
-    flex-wrap: wrap !important;
-    align-items: center !important;
-    padding: 0.5rem 1rem 0.5rem 1.1rem !important;
-    margin: 1px 8px !important;
-    border-radius: 8px !important;
-    font-size: 0.82rem !important;
-    font-weight: 500 !important;
-    letter-spacing: 0.01em !important;
-    cursor: pointer !important;
-    transition: background 0.15s ease, border-color 0.15s ease !important;
-    border-left: 3px solid transparent !important;
-    background: transparent !important;
-}
-[data-testid="stSidebar"] .stRadio label > div:first-child { display: none !important; }
-
-/* Eyebrow labels — encode the real pipeline grouping (Overview / Data / Model / Insights / Info) */
-[data-testid="stSidebar"] .stRadio label::before { content: none; }
-[data-testid="stSidebar"] .stRadio label:nth-of-type(1)::before  { content: "Overview"; margin-top: 4px; }
-[data-testid="stSidebar"] .stRadio label:nth-of-type(2)::before  { content: "Data";      margin-top: 14px; }
-[data-testid="stSidebar"] .stRadio label:nth-of-type(4)::before  { content: "Model";     margin-top: 14px; }
-[data-testid="stSidebar"] .stRadio label:nth-of-type(6)::before  { content: "Insights";  margin-top: 14px; }
-[data-testid="stSidebar"] .stRadio label:nth-of-type(10)::before { content: "Info";      margin-top: 14px; }
-[data-testid="stSidebar"] .stRadio label:nth-of-type(1)::before,
-[data-testid="stSidebar"] .stRadio label:nth-of-type(2)::before,
-[data-testid="stSidebar"] .stRadio label:nth-of-type(4)::before,
-[data-testid="stSidebar"] .stRadio label:nth-of-type(6)::before,
-[data-testid="stSidebar"] .stRadio label:nth-of-type(10)::before {
-    display: block;
-    flex-basis: 100%;
-    order: -1;
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.6rem;
-    font-weight: 600;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--text-on-ink-dim);
-    padding: 0 0.1rem 0.4rem;
-}
-
-/* Hover */
-[data-testid="stSidebar"] .stRadio label:hover {
-    background: rgba(79,142,247,0.07) !important;
-    border-left: 3px solid rgba(79,142,247,0.4) !important;
-}
-
-/* Active item (modern browsers via :has) */
-[data-testid="stSidebar"] .stRadio label:has(input:checked) {
-    background: rgba(79,142,247,0.12) !important;
-    border-left: 3px solid var(--spectrum-blue) !important;
-}
-[data-testid="stSidebar"] .stRadio label:has(input:checked) p {
-    color: #fff !important;
-    font-weight: 600 !important;
-}
-
-/* Visible keyboard focus */
-[data-testid="stSidebar"] .stRadio label:focus-within {
-    outline: 2px solid var(--spectrum-blue) !important;
-    outline-offset: 2px !important;
-}
-
-/* ── Status pills ── */
-.status-ready, .status-waiting, .status-info {
-    display: inline-flex; align-items: center; gap: 6px;
-    border-radius: 999px; padding: 3px 12px;
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.66rem; letter-spacing: 0.02em;
-}
-.status-ready {
-    background: rgba(20,184,166,0.12);
-    border: 1px solid rgba(20,184,166,0.3);
-    color: #5eead4 !important;
-}
-.status-waiting {
-    background: rgba(245,166,35,0.12);
-    border: 1px solid rgba(245,166,35,0.3);
-    color: #fcd34d !important;
-}
-.status-info {
-    background: rgba(79,142,247,0.12);
-    border: 1px solid rgba(79,142,247,0.3);
-    color: #93c5fd !important;
-}
-
-/* ── Metric cards (light canvas) ── */
-[data-testid="metric-container"] {
-    background: #fff; border-radius: 12px; padding: 1rem;
-    box-shadow: 0 2px 10px rgba(15,23,42,0.06);
-    border-left: 4px solid var(--spectrum-blue);
-}
-[data-testid="stMetricValue"] { font-family: 'IBM Plex Mono', monospace !important; }
-
-/* ── Page header banner ── */
-.page-header {
-    position: relative;
-    background: linear-gradient(135deg, var(--ink) 0%, var(--ink-2) 100%);
-    color: #fff; padding: 1.3rem 1.6rem 1.2rem; border-radius: 12px;
-    margin-bottom: 1.5rem; overflow: hidden;
-}
-.page-header::before {
-    content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
-    background: var(--spectrum-gradient); background-size: 100% 200%;
-}
-.page-header h2 {
-    margin: 0; font-size: 1.45rem;
-    font-family: 'Space Grotesk', sans-serif; font-weight: 700;
-}
-.page-header p { margin: 0.3rem 0 0; font-size: 0.85rem; opacity: 0.75; }
-
-/* ── Risk badges — directly reuse the spectrum's risk-tier mapping ── */
-.badge-high   { background:#fef1f3; color:#b91c3c; border:1px solid rgba(240,80,107,0.35);  border-radius:999px; padding:2px 10px; font-size:0.78rem; font-weight:600; }
-.badge-medium { background:#fef8ec; color:#92400e; border:1px solid rgba(245,166,35,0.35);  border-radius:999px; padding:2px 10px; font-size:0.78rem; font-weight:600; }
-.badge-low    { background:#effbf8; color:#0f766e; border:1px solid rgba(20,184,166,0.35);  border-radius:999px; padding:2px 10px; font-size:0.78rem; font-weight:600; }
-
-/* ── Info / warn / success boxes ── */
-.info-box    { background:#eff6ff; border-left:4px solid var(--spectrum-blue);  padding:.75rem 1rem; border-radius:6px; margin:.5rem 0; }
-.warn-box    { background:#fef8ec; border-left:4px solid var(--spectrum-amber); padding:.75rem 1rem; border-radius:6px; margin:.5rem 0; }
-.success-box { background:#effbf8; border-left:4px solid var(--spectrum-teal);  padding:.75rem 1rem; border-radius:6px; margin:.5rem 0; }
-
-.tech-box {
-    background:#F8FAFC; border:1px solid var(--hairline); border-radius:8px;
-    padding:1rem; font-family:'IBM Plex Mono', monospace; font-size:.8rem;
-}
-
-hr.section {
-    border: none; height: 1px; margin: 1.5rem 0;
-    background: linear-gradient(90deg, transparent, var(--hairline) 15%, var(--hairline) 85%, transparent);
-}
-
-/* ── Sidebar footer card ── */
-.sidebar-footer {
-    text-align:center; margin-top:1.2rem; padding:0.85rem 0.8rem;
-    background:rgba(255,255,255,0.03); border-radius:10px;
-    border:1px solid var(--ink-line);
-}
-.sidebar-footer .org   { font-size:0.63rem; color:var(--text-on-ink-dim); line-height:1.7; font-family:'IBM Plex Mono', monospace; }
-.sidebar-footer .proj  { color:#9aa3b8; }
-.sidebar-footer .super { color:#4b5567; font-size:0.58rem; }
-
-/* Hide Streamlit's auto-generated pages nav */
-[data-testid="stSidebarNav"] { display: none !important; }
-</style>
-""",
-    unsafe_allow_html=True,
-)
-
+# ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
-    # ── Logo / Branding ────────────────────────────────────────────────────
+    # Logo / brand
     st.markdown(
         """
-    <div style="text-align:center; padding:1.6rem 0 0.4rem;">
-        <div style="
-            display:inline-flex; align-items:center; justify-content:center;
-            width:56px; height:56px; border-radius:14px;
-            background:var(--ink-2);
-            border:1px solid var(--ink-line);
-            margin-bottom:0.7rem;">
-            <svg width="32" height="32" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <line x1="2" y1="17" x2="13" y2="17" stroke="#E7E9F0" stroke-width="1.6"/>
-                <polygon points="13,8 13,26 24,17" fill="none" stroke="#E7E9F0" stroke-width="1.6"/>
-                <line x1="24" y1="17" x2="32" y2="6"  stroke="#7C6FF0" stroke-width="1.6"/>
-                <line x1="24" y1="17" x2="33" y2="12" stroke="#4F8EF7" stroke-width="1.6"/>
-                <line x1="24" y1="17" x2="33" y2="17" stroke="#14B8A6" stroke-width="1.6"/>
-                <line x1="24" y1="17" x2="33" y2="22" stroke="#F5A623" stroke-width="1.6"/>
-                <line x1="24" y1="17" x2="32" y2="28" stroke="#F0506B" stroke-width="1.6"/>
-            </svg>
-        </div>
-        <div style="
-            font-size:1.4rem; font-weight:700; letter-spacing:3px;
-            font-family:'Space Grotesk', sans-serif; color:#fff;">
-            PRISM
-        </div>
-        <div style="font-size:0.62rem; color:#7C8298; margin-top:3px; letter-spacing:0.04em; font-family:'IBM Plex Mono', monospace;">
-            Predictive Risk Identification<br>for Student Monitoring
-        </div>
+<div style="text-align:center;padding:1.4rem 0 0.2rem;">
+    <div style="display:inline-flex;align-items:center;justify-content:center;
+                width:52px;height:52px;border-radius:14px;
+                background:rgba(37,99,235,0.18);border:1px solid rgba(37,99,235,0.3);
+                margin-bottom:0.6rem;">
+        <svg width="28" height="28" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <line x1="2"  y1="17" x2="13" y2="17" stroke="#E2E8F0" stroke-width="1.7"/>
+            <polygon points="13,8 13,26 24,17" fill="none" stroke="#E2E8F0" stroke-width="1.7"/>
+            <line x1="24" y1="17" x2="32" y2="6"  stroke="#8B5CF6" stroke-width="1.7"/>
+            <line x1="24" y1="17" x2="33" y2="12" stroke="#3B82F6" stroke-width="1.7"/>
+            <line x1="24" y1="17" x2="33" y2="17" stroke="#14B8A6" stroke-width="1.7"/>
+            <line x1="24" y1="17" x2="33" y2="22" stroke="#F59E0B" stroke-width="1.7"/>
+            <line x1="24" y1="17" x2="32" y2="28" stroke="#EF4444" stroke-width="1.7"/>
+        </svg>
     </div>
-    <div class="spectrum-divider"></div>
-    """,
+    <div style="font-size:1.45rem;font-weight:800;letter-spacing:5px;
+                font-family:'Inter',sans-serif;color:#fff;">PRISM</div>
+    <div style="font-size:0.61rem;color:#64748B;margin-top:2px;
+                letter-spacing:0.06em;font-family:'JetBrains Mono',monospace;line-height:1.5;">
+        Student Risk Monitor
+    </div>
+</div>
+<div class="accent-bar"></div>
+""",
         unsafe_allow_html=True,
     )
 
-    page = st.radio(
-        "Navigation",
-        [
-            "Dashboard Overview",
-            "Upload & Configure Data",
-            "Dataset Overview",
-            "Preprocessing Pipeline",
-            "Model Training & Tuning",
-            "Student Risk Predictions",
-            "Prediction Summary",
-            "Explainability Insights",
-            "Feature Importance",
-            "About PRISM",
-        ],
-        label_visibility="collapsed",
-    )
+    # Dark mode toggle
+    col_a, col_b = st.columns([3, 2])
+    with col_a:
+        st.markdown(
+            '<div style="padding:0.35rem 0 0 0.3rem;font-size:0.75rem;color:#64748B;">🌙 Dark mode</div>',
+            unsafe_allow_html=True,
+        )
+    with col_b:
+        dark = st.toggle(
+            "",
+            value=st.session_state["dark_mode"],
+            key="dark_toggle",
+            label_visibility="collapsed",
+        )
+        if dark != st.session_state["dark_mode"]:
+            st.session_state["dark_mode"] = dark
+            st.rerun()
 
-    # ── Status ─────────────────────────────────────────────────────────────
-    st.markdown("<div class='spectrum-divider'></div>", unsafe_allow_html=True)
+    st.markdown("<div class='accent-bar'></div>", unsafe_allow_html=True)
 
+    # Navigation (grouped by section headers)
+    all_flat_labels = nav_labels  # flat list for radio
+    page = st.radio("Navigation", nav_labels, label_visibility="collapsed")
+
+    st.markdown("<div class='accent-bar'></div>", unsafe_allow_html=True)
+
+    # Status pills
     if st.session_state.get("prism_ready"):
         st.markdown(
-            """
-        <div style="text-align:center; padding:0.3rem 0;">
-            <span class="status-ready">● &nbsp;Models ready</span>
-        </div>""",
+            '<div style="text-align:center;padding:0.15rem 0;"><span class="pill pill-green">✓ &nbsp;Model ready</span></div>',
             unsafe_allow_html=True,
         )
     else:
         st.markdown(
-            """
-        <div style="text-align:center; padding:0.3rem 0;">
-            <span class="status-waiting">◌ &nbsp;Awaiting data…</span>
-        </div>""",
+            '<div style="text-align:center;padding:0.15rem 0;"><span class="pill pill-amber">◌ &nbsp;No data loaded</span></div>',
             unsafe_allow_html=True,
         )
 
-    from utils.supabase_client import is_connected as _supabase_connected
-    if _supabase_connected():
-        st.markdown(
-            """
-        <div style="text-align:center; padding:0.15rem 0;">
-            <span class="status-info">☁ &nbsp;Supabase connected</span>
-        </div>""",
-            unsafe_allow_html=True,
-        )
+    if _sb_ok():
+        if _schema_status.get("ok"):
+            if _schema_status.get("ran"):
+                st.markdown(
+                    '<div style="text-align:center;padding:0.1rem 0 0.3rem;"><span class="pill pill-green">☁ &nbsp;Cloud set up ✓</span></div>',
+                    unsafe_allow_html=True,
+                )
+            else:
+                st.markdown(
+                    '<div style="text-align:center;padding:0.1rem 0 0.3rem;"><span class="pill pill-blue">☁ &nbsp;Cloud sync active</span></div>',
+                    unsafe_allow_html=True,
+                )
+        elif _schema_status.get("needs_pat"):
+            st.markdown(
+                '<div style="text-align:center;padding:0.1rem 0 0.3rem;"><span class="pill pill-amber">☁ &nbsp;Cloud: needs setup</span></div>',
+                unsafe_allow_html=True,
+            )
+        else:
+            st.markdown(
+                '<div style="text-align:center;padding:0.1rem 0 0.3rem;"><span class="pill pill-red">☁ &nbsp;Cloud setup failed</span></div>',
+                unsafe_allow_html=True,
+            )
     else:
         st.markdown(
-            """
-        <div style="text-align:center; padding:0.15rem 0;">
-            <span class="status-waiting">☁ &nbsp;Supabase not configured</span>
-        </div>""",
+            '<div style="text-align:center;padding:0.1rem 0 0.3rem;"><span class="pill pill-amber">☁ &nbsp;Cloud sync off</span></div>',
             unsafe_allow_html=True,
         )
 
-    # ── Footer ─────────────────────────────────────────────────────────────
+    # Onboarding hint
+    if not st.session_state.get("prism_ready"):
+        st.markdown(
+            """
+<div style="margin:0.7rem 0.5rem 0;padding:0.7rem 0.85rem;
+            background:rgba(37,99,235,0.08);border-radius:10px;
+            border:1px solid rgba(37,99,235,0.18);font-size:0.74rem;
+            color:#93C5FD;line-height:1.6;">
+    <strong style="color:#60A5FA;">👋 Getting started</strong><br>
+    Upload your OULAD files, then follow the pipeline steps top-to-bottom.
+</div>
+""",
+            unsafe_allow_html=True,
+        )
+
+    # Footer
     st.markdown(
         """
-    <div class="sidebar-footer">
-        <div class="org">
-            Taylor's University<br>
-            <span class="proj">MAC Capstone Project</span><br>
-            <span class="super">Supervisor: Assoc. Prof. Dr. Shakeel Ahmed</span>
-        </div>
-    </div>
-    """,
+<div class="sidebar-footer">
+    Taylor's University<br>
+    <strong>MAC Capstone 2025/26</strong><br>
+    Supervisor: Assoc. Prof. Dr. Shakeel Ahmed
+</div>
+""",
         unsafe_allow_html=True,
     )
 
-if "Dashboard Overview" in page:
+# ── Supabase setup banners ────────────────────────────────────────────────────
+if _schema_status.get("ran") and _schema_status.get("ok"):
+    st.toast("☁️ Supabase database set up automatically!", icon="✅")
+elif _schema_status.get("needs_pat"):
+    st.markdown(
+        """
+<div class="setup-banner">
+    <strong>☁️ One-time cloud setup needed</strong><br>
+    Add your Supabase Personal Access Token to <code>.env</code>:<br><br>
+    <code>SUPABASE_PAT=your_token_here</code><br><br>
+    Get it at <strong>supabase.com → Account → Access Tokens</strong>.
+    Restart the app after adding it. Cloud sync is optional — the app works fully without it.
+</div>
+""",
+        unsafe_allow_html=True,
+    )
+elif _schema_status.get("ran") and not _schema_status.get("ok"):
+    st.warning(
+        f"⚠️ Auto Supabase setup failed: {_schema_status.get('message','')}  \nApp still works fully.",
+        icon="⚠️",
+    )
+
+# ── Page routing ──────────────────────────────────────────────────────────────
+selected_key = nav_keys[nav_labels.index(page)]
+
+if selected_key == "Dashboard Overview":
     from pages import dashboard
 
     dashboard.render()
-elif "Upload & Configure Data" in page:
+elif selected_key == "Upload & Configure Data":
     from pages import upload_data
 
     upload_data.render()
-elif "Dataset Overview" in page:
+elif selected_key == "Dataset Overview":
     from pages import dataset_overview
 
     dataset_overview.render()
-elif "Preprocessing Pipeline" in page:
+elif selected_key == "Preprocessing Pipeline":
     from pages import preprocessing_page
 
     preprocessing_page.render()
-elif "Model Training & Tuning" in page:
+elif selected_key == "Model Training & Tuning":
     from pages import model_training
 
     model_training.render()
-elif "Student Risk Predictions" in page:
+elif selected_key == "Student Risk Predictions":
     from pages import predictions
 
     predictions.render()
-elif "Prediction Summary" in page:
+elif selected_key == "Prediction Summary":
     from pages import prediction_summary
 
     prediction_summary.render()
-elif "Explainability Insights" in page:
+elif selected_key == "Explainability Insights":
     from pages import explainability
 
     explainability.render()
-elif "Feature Importance" in page:
+elif selected_key == "Feature Importance":
     from pages import feature_importance
 
     feature_importance.render()
-elif "About PRISM" in page:
+elif selected_key == "About PRISM":
     from pages import about
 
     about.render()

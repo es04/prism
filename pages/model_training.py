@@ -17,6 +17,7 @@ import sys, pathlib
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent.parent))
 from pages.state_manager import get_or_init_state
+import theme
 from utils.model_utils import (
     DEFAULT_XGB_PARAMS,
     cross_validate_model,
@@ -26,6 +27,7 @@ from utils.model_utils import (
 
 
 def render():
+    theme.inject_theme_css()
     st.markdown(
         """
     <div class="page-header">

@@ -1,219 +1,169 @@
+"""
+PRISM v2 – About PRISM (redesigned)
+"""
+
 import streamlit as st
+import sys, pathlib
+sys.path.insert(0, str(pathlib.Path(__file__).parent.parent))
+import theme
 
 
 def render():
-    st.markdown("""
-    <div class="page-header">
-        <h2>ℹ️ About PRISM</h2>
-        <p>Predictive Risk Identification for Student Monitoring — System Overview</p>
-    </div>
-    """, unsafe_allow_html=True)
+    dark = theme.is_dark()
 
-    # Hero Section
-    st.markdown("""
-    <div style="background:linear-gradient(135deg,#1e3a8a 0%,#1d4ed8 60%,#0ea5e9 100%);
-                border-radius:14px;padding:2rem;color:white;margin-bottom:1.5rem;">
-        <div style="font-size:2.5rem;font-weight:800;letter-spacing:3px;margin-bottom:.5rem;">
-            🔮 PRISM
-        </div>
-        <div style="font-size:1.1rem;opacity:.9;margin-bottom:1rem;">
-            Predictive Risk Identification for Student Monitoring
-        </div>
-        <p style="opacity:.85;max-width:700px;">
-            PRISM is an explainable AI system for early identification of academically
-            at-risk students. It combines XGBoost machine learning, SHAP explainability,
-            and an interactive Streamlit dashboard, built on the Open University Learning
-            Analytics Dataset (OULAD).
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
+    theme.page_header("ℹ️", "About PRISM",
+                      "Predictive Risk Identification for Student Monitoring — System Overview")
 
-    # How It Works Section
+    # Hero
+    st.markdown(f"""
+<div style="background:linear-gradient(135deg,#0F172A 0%,#1E2D4A 60%,#1E3A5F 100%);
+            border-radius:var(--radius-lg);padding:2rem 2.2rem;color:white;
+            margin-bottom:1.5rem;border:1px solid rgba(255,255,255,0.06);
+            position:relative;overflow:hidden;">
+    <div style="position:absolute;top:0;left:0;right:0;height:3px;
+                background:var(--accent-bar);"></div>
+    <div style="font-size:2.2rem;font-weight:800;letter-spacing:4px;
+                margin-bottom:.4rem;font-family:'JetBrains Mono',monospace;">🔮 PRISM</div>
+    <div style="font-size:1.05rem;opacity:.85;margin-bottom:.9rem;">
+        Predictive Risk Identification for Student Monitoring
+    </div>
+    <p style="opacity:.75;max-width:680px;line-height:1.65;font-size:0.9rem;">
+        PRISM is an explainable AI system for early identification of academically at-risk students.
+        It combines XGBoost machine learning, SHAP explainability, and an interactive dashboard,
+        built on the Open University Learning Analytics Dataset (OULAD) with 32,593 student records.
+    </p>
+    <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-top:1.1rem;">
+        <span style="background:rgba(37,99,235,0.25);border:1px solid rgba(37,99,235,0.4);
+                     border-radius:999px;padding:4px 14px;font-size:0.78rem;font-weight:600;">
+            93.05% Accuracy
+        </span>
+        <span style="background:rgba(13,148,136,0.25);border:1px solid rgba(13,148,136,0.4);
+                     border-radius:999px;padding:4px 14px;font-size:0.78rem;font-weight:600;">
+            97.94% ROC-AUC
+        </span>
+        <span style="background:rgba(139,92,246,0.25);border:1px solid rgba(139,92,246,0.4);
+                     border-radius:999px;padding:4px 14px;font-size:0.78rem;font-weight:600;">
+            32,593 Students
+        </span>
+        <span style="background:rgba(217,119,6,0.25);border:1px solid rgba(217,119,6,0.4);
+                     border-radius:999px;padding:4px 14px;font-size:0.78rem;font-weight:600;">
+            10.6M LMS Interactions
+        </span>
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
+    # How it works
     st.subheader("⚙️ How PRISM Works")
-    col1, col2, col3, col4 = st.columns(4)
+    steps = [
+        ("📂", "1. Data Collection",     "OULAD datasets merged into a master dataset with 32,593 student records and 10.6M VLE interactions."),
+        ("⚗️", "2. Feature Engineering", "Behavioural, academic, and registration features engineered from raw CSV files."),
+        ("⚖️", "3. SMOTE Balancing",    "Synthetic Minority Oversampling addresses class imbalance before model training."),
+        ("🤖", "4. ML Prediction",       "XGBoost classifier trained with stratified K-fold cross-validation."),
+        ("💡", "5. SHAP Explanation",    "Global & local SHAP values explain each prediction in plain terms for educators."),
+    ]
+    cols = st.columns(len(steps))
+    text_col = "#E2E8F0" if dark else "#1E293B"
+    muted    = "#94A3B8" if dark else "#64748B"
+    bg_step  = "#1A2234" if dark else "#FFFFFF"
+    border_s = "#1E2D4A" if dark else "#E2E8F0"
 
-    step_style = """background:white;border-radius:10px;padding:1rem;text-align:center;
-                    border:1px solid #e2e8f0;box-shadow:0 2px 6px rgba(0,0,0,.05);height:160px;"""
+    for col, (icon, title, desc) in zip(cols, steps):
+        with col:
+            st.markdown(f"""
+<div style="background:{bg_step};border:1px solid {border_s};border-radius:var(--radius-md);
+            padding:1rem;text-align:center;height:160px;box-shadow:var(--shadow);">
+    <div style="font-size:1.8rem;margin-bottom:0.4rem;">{icon}</div>
+    <div style="font-weight:700;color:{text_col};font-size:0.85rem;margin-bottom:0.4rem;">{title}</div>
+    <div style="font-size:0.77rem;color:{muted};line-height:1.5;">{desc}</div>
+</div>
+""", unsafe_allow_html=True)
 
-    with col1:
-        st.markdown(f"""
-        <div style="{step_style}">
-            <div style="font-size:2rem">📂</div>
-            <b style="color:#1e40af;">1. Data Collection</b>
-            <p style="font-size:.8rem;color:#64748b;margin-top:.4rem;">
-                OULAD datasets merged into a master dataset with 32,593 student records.
-            </p>
-        </div>""", unsafe_allow_html=True)
-    with col2:
-        st.markdown(f"""
-        <div style="{step_style}">
-            <div style="font-size:2rem">⚗️</div>
-            <b style="color:#1e40af;">2. Feature Engineering</b>
-            <p style="font-size:.8rem;color:#64748b;margin-top:.4rem;">
-                Behavioral, academic and registration features engineered from raw data.
-            </p>
-        </div>""", unsafe_allow_html=True)
-    with col3:
-        st.markdown(f"""
-        <div style="{step_style}">
-            <div style="font-size:2rem">🤖</div>
-            <b style="color:#1e40af;">3. ML Prediction</b>
-            <p style="font-size:.8rem;color:#64748b;margin-top:.4rem;">
-                XGBoost classifier trained with SMOTE balancing and stratified K-fold CV.
-            </p>
-        </div>""", unsafe_allow_html=True)
-    with col4:
-        st.markdown(f"""
-        <div style="{step_style}">
-            <div style="font-size:2rem">💡</div>
-            <b style="color:#1e40af;">4. SHAP Explanation</b>
-            <p style="font-size:.8rem;color:#64748b;margin-top:.4rem;">
-                Global & local SHAP values explain each prediction to educators.
-            </p>
-        </div>""", unsafe_allow_html=True)
+    theme.section_div()
 
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    # Tabs: Technical Specs, Dataset, Methodology, Project Info
-    tab1, tab2, tab3, tab4 = st.tabs(["🛠️ Technical Specifications",
-                                       "📚 Dataset",
-                                       "📐 Methodology",
-                                       "🏫 Project Information"])
+    tab1, tab2, tab3, tab4 = st.tabs(["🛠️ Technical Specs", "📚 Dataset", "📐 Methodology", "🏫 Project Info"])
 
     with tab1:
         col_a, col_b = st.columns(2)
         with col_a:
             st.markdown("""
-            **Machine Learning**
-            | Component | Detail |
-            |---|---|
-            | Primary Model | XGBoost (Extreme Gradient Boosting) |
-            | Baseline Model | Logistic Regression |
-            | Class Balancing | SMOTE (Synthetic Minority Oversampling) |
-            | Validation | Stratified 5-Fold Cross-Validation |
-            | Explainability | SHAP (TreeExplainer) |
-            | Risk Thresholds | High ≥65%, Medium 40–65%, Low <40% |
-            """)
+**Machine Learning**
 
+| Component | Detail |
+|---|---|
+| Primary Model | XGBoost (Extreme Gradient Boosting) |
+| Baseline | Logistic Regression |
+| Balancing | SMOTE |
+| Validation | Stratified 5-Fold CV |
+| Explainability | SHAP (TreeExplainer) |
+| High Risk Threshold | ≥ 65% probability |
+| Medium Risk Threshold | 40–65% probability |
+""")
         with col_b:
             st.markdown("""
-            **Technology Stack**
-            | Component | Technology |
-            |---|---|
-            | Language | Python 3.x |
-            | Dashboard | Streamlit |
-            | ML Library | XGBoost, scikit-learn |
-            | Class Balancing | imbalanced-learn |
-            | Explainability | SHAP |
-            | Visualization | Plotly, Matplotlib, Seaborn |
-            | Data Processing | Pandas, NumPy |
-            """)
+**Technology Stack**
 
-        st.subheader("XGBoost Hyperparameters")
-        st.code("""
-XGBClassifier(
-    n_estimators      = 300,
-    max_depth         = 6,
-    learning_rate     = 0.05,
-    subsample         = 0.8,
-    colsample_bytree  = 0.8,
-    min_child_weight  = 3,
-    gamma             = 0.1,
-    reg_alpha         = 0.1,
-    reg_lambda        = 1.0,
-    eval_metric       = "logloss",
-    random_state      = 42,
-)
-        """, language="python")
+| Component | Technology |
+|---|---|
+| Dashboard | Streamlit |
+| ML Library | XGBoost, scikit-learn |
+| Data | pandas, numpy |
+| Visualisation | Plotly, Matplotlib |
+| Explainability | SHAP |
+| Database | Supabase (PostgreSQL) |
+| Language | Python 3.11 |
+""")
 
     with tab2:
         st.markdown("""
-        ### Open University Learning Analytics Dataset (OULAD)
+**Open University Learning Analytics Dataset (OULAD)**
 
-        OULAD is a publicly available educational dataset from the Open University (UK),
-        widely used in Educational Data Mining and Learning Analytics research.
+The OULAD dataset was released by The Open University (UK) for learning analytics research.
 
-        | Dataset | Records | Description |
-        |---|---|---|
-        | studentInfo.csv | 32,593 | Demographics, background, final results |
-        | studentAssessment.csv | 173,912 | Assessment submission scores and timing |
-        | studentVle.csv | 10.6M+ | Virtual Learning Environment interactions |
-        | studentRegistration.csv | 32,593 | Course registration/withdrawal dates |
-        | assessments.csv | 206 | Assessment metadata (type, weight, date) |
-        | courses.csv | 22 | Module presentation lengths |
-        | vle.csv | ~6,000 | VLE resource/activity metadata |
+| File | Description | Rows |
+|---|---|---|
+| studentInfo | Demographics & final results | 32,593 |
+| studentAssessment | Assessment submissions | ~173,000 |
+| studentVle | VLE click interactions | ~10.6M |
+| studentRegistration | Registration dates | ~32,593 |
+| assessments | Assessment metadata | ~206 |
+| courses | Module metadata | ~22 |
+| vle | VLE activity types | ~6,364 |
 
-        ### Feature Categories Used in PRISM
-
-        | Category | Features |
-        |---|---|
-        | Demographic | gender, age_band, highest_education, imd_band, disability, num_of_prev_attempts, studied_credits |
-        | Academic | avg_score, min_score, max_score, std_score, num_assessments, num_late_submissions, num_banked |
-        | Behavioural | total_clicks, avg_clicks_per_day, num_active_days, num_resources_accessed |
-        | Registration | registered_early, withdrew_early, days_enrolled, num_registrations |
-        | Course | module_presentation_length |
-
-        ### Target Variable
-        - **At Risk (1):** final_result = "Withdrawn" or "Fail"
-        - **Not At Risk (0):** final_result = "Pass" or "Distinction"
-        """)
+**Target Variable:** Binary classification — *At Risk* (Withdrawn/Fail) vs *Not At Risk* (Pass/Distinction).
+""")
 
     with tab3:
         st.markdown("""
-        ### CRISP-DM Analytical Methodology
+**Pipeline Architecture**
 
-        PRISM follows the **Cross-Industry Standard Process for Data Mining (CRISP-DM)**:
+1. **Data Merging** — Seven OULAD CSVs joined on `id_student`, `code_module`, `code_presentation`
+2. **Feature Engineering** — 24 features across 5 categories: Academic, Behavioural, Demographic, Registration, Course
+3. **Preprocessing** — Label encoding for categoricals, StandardScaler for numerics, median imputation
+4. **Class Balancing** — SMOTE applied on training split only (test leakage prevention)
+5. **Model Training** — XGBoost with tunable hyperparameters; Logistic Regression as baseline
+6. **Evaluation** — Accuracy, Precision, Recall, F1, ROC-AUC + Confusion Matrix
+7. **Explainability** — SHAP TreeExplainer for global and local feature attribution
+8. **Risk Classification** — 3-tier: High (≥65%), Medium (40–65%), Low (<40%)
 
-        1. **Business Understanding** — Define the academic monitoring problem and intervention goals.
-        2. **Data Understanding** — Explore OULAD datasets, identify quality issues and relevant features.
-        3. **Data Preparation** — Clean, encode, impute, engineer features, apply SMOTE balancing.
-        4. **Modeling** — Train XGBoost (primary) and Logistic Regression (baseline) classifiers.
-        5. **Evaluation** — Assess models on Accuracy, Precision, Recall, F1, ROC-AUC; run SHAP analysis.
-        6. **Deployment** — Interactive Streamlit dashboard for educators and academic advisors.
-
-        ### Design Thinking Alignment
-
-        | Phase | PRISM Implementation |
-        |---|---|
-        | Empathize | Identified educator needs for transparent, actionable predictions |
-        | Define | Defined risk classification problem and XAI requirements |
-        | Ideate | Explored ML algorithms; selected XGBoost + SHAP |
-        | Prototype | Built low-fidelity wireframes and high-fidelity Figma mockups |
-        | Test | Functional testing of prediction, explainability, and dashboard modules |
-
-        ### Evaluation Metrics
-
-        Recall is prioritised (minimise false negatives = missing at-risk students).
-        F1-score balances precision and recall under class imbalance.
-        """)
+**Key Design Decisions**
+- SMOTE on training set only ensures no data leakage
+- 80/20 stratified train-test split preserves class ratios
+- SHAP over feature importance scores for causal interpretability
+""")
 
     with tab4:
-        st.markdown("""
-        ### Project Information
-
-        | Field | Detail |
-        |---|---|
-        | System Name | PRISM (Predictive Risk Identification for Student Monitoring) |
-        | Programme | Master in Applied Computing (MAC) |
-        | Institution | Taylor's University, Malaysia |
-        | Project Type | Capstone I Research Prototype |
-        | Supervisor | Assoc. Prof. Dr. Shakeel Ahmed |
-        | Module Leader | Prof. Dr. Noor Zaman Jhanjhi |
-
-        ### System Modules
-
-        | Module | Description |
-        |---|---|
-        | Dashboard Overview | High-level KPI cards, risk distribution, model performance |
-        | Student Risk Predictions | Searchable student-level prediction table |
-        | Prediction Summary | Confusion matrix, ROC curve, CV results |
-        | Explainability Insights | Global SHAP beeswarm, local waterfall per student |
-        | Feature Importance | SHAP importance, XGBoost built-in, correlation heatmap |
-        | Dataset Overview | Raw data previews, distributions, data quality report |
-        | About PRISM | System documentation and technical specifications |
-
-        ### Mission Statement
-        > *PRISM enables transparent, data-informed early intervention for at-risk students
-        > by combining explainable machine learning with an interactive analytics dashboard —
-        > empowering educators to act proactively, not reactively.*
-        """)
+        st.markdown(f"""
+<div style="background:{'#1A2234' if dark else '#F8FAFC'};border:1px solid {'#1E2D4A' if dark else '#E2E8F0'};
+            border-radius:var(--radius-md);padding:1.3rem;font-size:0.9rem;line-height:1.8;">
+    <strong>Project Information</strong><br><br>
+    <b>System:</b> PRISM – Predictive Risk Identification for Student Monitoring<br>
+    <b>Type:</b> Master of Applied Computing (MAC) Capstone Project<br>
+    <b>Institution:</b> Taylor's University, Malaysia<br>
+    <b>Module Leader:</b> Prof. Dr. Noor Zaman Jhanjhi<br>
+    <b>Supervisor:</b> Assoc. Prof. Dr. Shakeel Ahmed<br>
+    <b>Dataset:</b> OULAD (Open University Learning Analytics Dataset)<br>
+    <b>Key Metrics:</b> 93.05% Accuracy · 97.94% ROC-AUC<br>
+    <b>Built with:</b> Python 3.11 · Streamlit · XGBoost · SHAP · Supabase
+</div>
+""", unsafe_allow_html=True)

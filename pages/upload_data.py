@@ -66,6 +66,7 @@ def _validate_df(name: str, df: pd.DataFrame) -> dict:
 
 
 def render():
+    theme.inject_theme_css()
     st.markdown("""
     <div class="page-header">
         <h2>📤 Upload & Configure Data</h2>
@@ -96,6 +97,7 @@ def render():
         if st.button("🚀 Run Pipeline with Built-in Data", type="primary", use_container_width=True):
             st.session_state["prism_ready"] = False
             from pages.state_manager import get_or_init_state
+import theme
             if get_or_init_state(force_retrain=False):
                 st.success("✅ Pipeline complete! Navigate to any page to explore results.")
                 st.rerun()
@@ -362,6 +364,7 @@ def render():
                      use_container_width=True):
             st.session_state["prism_ready"] = False
             from pages.state_manager import get_or_init_state
+import theme
             if get_or_init_state(force_retrain=True):
                 st.success("✅ Pipeline complete! Navigate to any page to explore results.")
                 st.rerun()

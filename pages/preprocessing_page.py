@@ -7,9 +7,11 @@ import plotly.graph_objects as go
 import sys, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).parent.parent))
 from pages.state_manager import get_or_init_state
+import theme
 
 
 def render():
+    theme.inject_theme_css()
     if not get_or_init_state():
         return
 
